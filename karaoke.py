@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import mysql.connector, os
-from subprocess import Popen
 from Tkinter import *
+import vlc
 cnx=mysql.connector.connect(user=os.getenv('USER'),database='karaoke')
 cursor=cnx.cursor()
-p=None
 area=''
 gender=''
 singer=''
@@ -15,28 +14,17 @@ arealist={u'日本':0,u'大陆':1,u'港台':2,u'其他':3}
 genderlist={u'乐队组合':0,u'男歌手':1,u'女歌手':2}
 languagelist={0:u'日语',1:u'国语',2:u'粤语',3:u'闽南语',4:u'英语',5:u'其他'}
 languagereverse={u'日语':0,u'国语':1,u'粤语':2,u'闽南语':3,u'英语':4,u'其他':5}
+i=vlc.Instance()
+l=i.media_list_new()
+p=i.media_list_player_new()
+P=i.media_player_new()
+p.set_media_list(l)
+p.set_media_player(P)
+P.set_fullscreen(True)
 
 def player():
-    global listcurrent,p
-    root.after(1000,player)
-    ps=os.popen("ps -A").read()
-    count=ps.count("vlc")
-    if count==0 and listcurrent.size():
-        id=listcurrent.get(0)[0]
-        query="select url from karaoke where id="+str(id)
-        cursor.execute(query)
-        for item in cursor:
-            url=item[0]
-        realurl=os.popen("youtube-dl -g "+url).read()
-        realurl='"%s"'%realurl.rstrip()
-        p=Popen('vlc '+realurl+' vlc://quit',shell=True)
-        listcurrent.delete(0)
-    else:
-        try:
-            p.poll()
-        except:
-            pass
-        return None
+    global p
+    p.play()
 
 def select(type):
     global var,listselect,area,gender,singer,song
@@ -76,30 +64,30 @@ def choose(selection):
         pass
 
 def add():
-    global area,gender,singer,song,language,listcurrent
+    global area,gender,singer,song,language,listcurrent,l,p
     if len(song):
-       query="select id,song,singer,language from karaoke where area='"+str(arealist.get(area))+"' and gender='"+str(genderlist.get(gender))+"' and singer='"+singer+"' and song='"+song+"' and language="+str(language)
+       query="select id,song,singer,language,url from karaoke where area='"+str(arealist.get(area))+"' and gender='"+str(genderlist.get(gender))+"' and singer='"+singer+"' and song='"+song+"' and language="+str(language)
        cursor.execute(query)
        for item in cursor:
            listcurrent.insert(END,(item[0],item[1],item[2],languagelist[item[3]]))
+           realurl=os.popen("youtube-dl -g "+item[4]).read()
+           realurl="%s"%realurl.rstrip()
+           l.add_media(i.media_new(realurl))
     else:
         return None
+    if p.get_state()!=3:
+        p.play()
 
 def skip():
     global p
-    p.terminate()
-    os.wait()
+    p.next()
 
-def top():
-    global listcurrent
-    pos=listcurrent.curselection()
-    if pos:
-        position=pos[0]
-        content=tuple(listcurrent.selection_get().split())
-        listcurrent.delete(pos)
-        listcurrent.insert(0,content)
-    else:
-        return None
+def channel():
+    global P
+    channelmap={1:3,3:4,4:1}
+    currentchannel=P.audio_get_channel()
+    targetchannel=channelmap[currentchannel]
+    P.audio_set_channel(targetchannel)
 
 root=Tk()
 root.after(1000,player)
@@ -118,14 +106,14 @@ buttonsinger=Button(root,text="歌手",command=lambda:select('歌手'))
 buttonsong=Button(root,text="歌曲",command=lambda:select('歌曲'))
 buttonadd=Button(root,text="点",bg="green",command=add)
 buttonskip=Button(root,text="切",bg="yellow",command=skip)
-buttontop=Button(root,text="顶",bg="red",command=top)
+buttonchannel=Button(root,text="原唱/伴奏",bg="blue",command=channel)
 buttonarea.pack()
 buttongender.pack()
 buttonsinger.pack()
 buttonsong.pack()
 buttonadd.pack()
 buttonskip.pack()
-buttontop.pack()
+buttonchannel.pack()
 root.mainloop()
 cursor.close()
 cnx.close()
