@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import mysql.connector, os
+import sqlite3, os
 from Tkinter import *
 import vlc
-cnx=mysql.connector.connect(user=os.getenv('USER'),database='karaoke')
+cnx=sqlite3.connect('karaoke.db')
 cursor=cnx.cursor()
 area=''
 gender=''
