@@ -69,7 +69,7 @@ def add():
        query="select id,song,singer,language,url from karaoke where area='"+str(arealist.get(area))+"' and gender='"+str(genderlist.get(gender))+"' and singer='"+singer+"' and song='"+song+"' and language="+str(language)
        cursor.execute(query)
        for item in cursor:
-           realurl=os.popen("yturl -q high"+item[4]).read()
+           realurl=os.popen("yturl -q high "+item[4]).read()
            if len(realurl):
                listcurrent.insert(END,(item[0],item[1],item[2],languagelist[item[3]]))
                realurl="%s"%realurl.rstrip()
